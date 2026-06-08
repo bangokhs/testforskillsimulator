@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>컴프야V 스킬 변경 시뮬레이터</title>
+    <style>
+        :root {
+            --color-국대: #ff1744;
+            --color-메이저: #b537f2;
+            --color-마이너: #007bff;
+            --color-루키: #28a745;
+            --color-아마추어: #6c757d;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: #111;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+            user-select: none;
+        }
+
+        /* 인게임 스크린 세로 스트레칭 비율 고정 */
+        .phone-container {
+            width: 430px;
+            height: 932px;
+            background: linear-gradient(135deg, #057bda 0%, #005bc5 50%, #003fa3 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 24px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /* 상단 카드 타입 네비게이터 */
+        .card-type-menu {
+            display: flex;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            margin-top: 10px;
+            border-radius: 6px;
+            padding: 2px;
+            box-sizing: border-box;
+            z-index: 100;
+        }
+
+        .card-type-menu button {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #889bb0;
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 6px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .card-type-menu button.active {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        /* 메인 타이틀 & 서브 타이틀 */
+        .header-area {
+            text-align: center;
+            margin-top: 35px;
+        }
+
+        .header-area h1 {
+            font-size: 1.9rem;
+            font-weight: bold;
+            margin: 0;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .header-area p {
+            font-size: 0.85rem;
+            color: #00ffcc;
+            margin: 8px 0 0 0;
+            font-weight: bold;
+        }
+
+        /* 징검다리 화살표 및 OR 가로라인 섹션 완벽 구현 */
+        .arrow-vs-section {
+            width: 100%;
+            height: 50px;
+            position: relative;
+            margin-top: 15px;
+        }
+
+        .arrow-svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .or-text {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.4rem;
+            font-weight: 900;
+            font-style: italic;
+            color: #e2e8f0;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 5;
+        }
+
+        /* 메인 보드 판넬 레이아웃 */
+        .board-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        /* 인게임 특유의 상하 대칭형 쉴드 펜타곤 컷팅 양식 적용 */
+        .main-shield-plate {
+            width: 47%;
+            height: 485px;
+            position: relative;
+            box-sizing: border-box;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 22px;
+        }
+
+        .shield-left {
+            background: #ffffff;
+            clip-path: polygon(50% 0%, 100% 3%, 100% 92%, 50% 100%, 0% 92%, 0% 3%);
+            border: 3px solid #ffd700;
+        }
+        /* 클립패스 내부 보더 우회 구현용 내부 가상선 구현 */
+        .shield-left::before {
+            content: ''; position: absolute; top:0; left:0; right:0; bottom:0;
+            clip-path: polygon(50% 0%, 100% 3%, 100% 92%, 50% 100%, 0% 92%, 0% 3%);
+            border: 4px solid #ffd200; pointer-events: none;
+        }
+
+        .shield-right {
+            background: #20263f;
+            clip-path: polygon(50% 0%, 100% 3%, 100% 92%, 50% 100%, 0% 92%, 0% 3%);
+        }
+        .shield-right::before {
+            content: ''; position: absolute; top:0; left:0; right:0; bottom:0;
+            clip-path: polygon(50% 0%, 100% 3%, 100% 92%, 50% 100%, 0% 92%, 0% 3%);
+            border: 4px solid #171c30; pointer-events: none;
+        }
+
+        .plate-title {
+            font-size: 1.05rem;
+            font-weight: bold;
+            margin-top: 5px;
+            margin-bottom: -5px;
+            z-index: 2;
+        }
+        .shield-left .plate-title { color: #111111; }
+        .shield-right .plate-title { color: #ffffff; }
+
+        /* 내부 스킬 아이템 정렬 구조 */
+        .skill-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            z-index: 2;
+        }
+
+        /* 인게임 스킬 마크 전용 실드 프레임 테두리 디자인 */
+        .skill-frame {
+            width: 66px;
+            height: 72px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            box-sizing: border-box;
+            border: 3px solid #555;
+        }
+
+        .frame-국대 { border-color: var(--color-국대); background: linear-gradient(135deg, #500, #111); }
+        .frame-메이저 { border-color: var(--color-메이저); background: linear-gradient(135deg, #300048, #111); }
+        .frame-마이너 { border-color: var(--color-마이너); background: linear-gradient(135deg, #001f54, #111); }
+        .frame-루키 { border-color: var(--color-루키); background: linear-gradient(135deg, #023812, #111); }
+        .frame-아마추어 { border-color: var(--color-아마추어); background: linear-gradient(135deg, #252525, #111); }
+
+        .skill-display-text {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+            line-height: 1.1;
+            padding: 0 2px;
+        }
+
+        .in-level-box {
+            position: absolute;
+            bottom: 4px;
+            right: 0px;
+            background: #161616;
+            color: #fff;
+            border: 1px solid #666;
+            font-size: 0.65rem;
+            font-weight: bold;
+            width: 15px;
+            height: 15px;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .skill-name-text {
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-top: 6px;
+            text-align: center;
+        }
+        .shield-left .skill-name-text { color: #333333; }
+        .shield-right .skill-name-text { color: #bcdaff; }
+
+        /* 하단 결정 체크 버튼 라인 */
+        .check-btn-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .check-box-ui {
+            width: 47%;
+            height: 34px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+        }
+        
+        /* 미선택 및 선택 시 테두리 점등 상태 동기화 */
+        .active-glow-left { box-shadow: 0 0 12px #ffe600; }
+        .active-glow-right { box-shadow: 0 0 12px #b537f2; }
+
+        .chk-yellow { background: linear-gradient(to bottom, #ffe800, #ccb000); color: #111; font-size: 1.1rem; font-weight: bold; }
+        .chk-dark { background: #3d4564; color: #1e2235; font-size: 1.1rem; font-weight: bold; }
+        .chk-selected-right { background: linear-gradient(to bottom, #ffe800, #ccb000) !important; color: #111 !important; }
+
+        /* 하단 재화 인터페이스 랩 */
+        .bottom-control-wrap {
+            width: 100%;
+            margin-top: auto;
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .currency-status-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .currency-box {
+            width: 48%;
+            background: #061022;
+            border-radius: 4px;
+            padding: 6px 12px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .currency-box img {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            background: #555;
+        }
+        .text-count-normal { color: #cbff00; margin-left: auto; font-size: 1.05rem;}
+        .text-count-premium { color: #aeff00; margin-left: auto; font-size: 1.05rem;}
+
+        /* 최종 하단 버튼 3형제 */
+        .action-button-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .btn-ui-base {
+            height: 48px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-roll-trigger {
+            width: 33%;
+            background: linear-gradient(to bottom, #ffffff, #cfd7e0);
+            color: #1e2530;
+            border-bottom: 3px solid #9aa4b0;
+        }
+
+        .btn-submit-confirm {
+            width: 32%;
+            background: linear-gradient(to bottom, #b312ff, #7900b8);
+            color: #fff;
+            border-bottom: 3px solid #51007d;
+            font-size: 1rem;
+        }
+
+        .btn-ui-base:active { transform: scale(0.97); }
+    </style>
+</head>
+<body>
+
+<div class="phone-container">
+    <!-- 이미지 상단 4사 독립 분할 탭 메뉴 기획 -->
+    <div class="card-type-menu">
+        <button id="tab-sig" class="active" onclick="changeCardType('sig')">시그니처</button>
+        <button id="tab-imp" onclick="changeCardType('imp')">임팩트</button>
+        <button id="tab-gg" onclick="changeCardType('gg')">골글</button>
+        <button id="tab-kd" onclick="changeCardType('kd')">국가대표</button>
+    </div>
+
+    <div class="header-area">
+        <h1>스킬 변경</h1>
+        <p>기존 스킬과 신규 스킬 중 하나를 선택하세요</p>
+    </div>
+
+    <!-- 화살표 및 OR 완벽 레이아웃 -->
+    <div class="arrow-vs-section">
+        <svg class="arrow-svg" viewBox="0 0 400 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- 좌측 노란 화살표 -->
+            <path d="M 170 10 L 110 10 C 100 10, 95 15, 95 25 L 95 40" stroke="#ffe600" stroke-width="4" fill="none"/>
+            <polygon points="90,38 95,48 100,38" fill="#ffe600" />
+            <!-- 우측 검은 화살표 -->
+            <path d="M 230 10 L 290 10 C 300 10, 305 15, 305 25 L 305 40" stroke="#171c30" stroke-width="4" fill="none"/>
+            <polygon points="300,38 305,48 310,38" fill="#171c30" />
+        </svg>
+        <div class="or-text">OR</div>
+    </div>
+
+    <!-- 메인 보드 존 -->
+    <div class="board-container">
+        <!-- 기존 스킬 카드 플레이트 -->
+        <div class="main-shield-plate shield-left active-glow-left" id="panel-left" onclick="switchFocus('left')">
+            <div class="plate-title">기존스킬</div>
+            <div id="box-left-slots" style="width:100%; display:flex; flex-direction:column; gap:20px;"></div>
+        </div>
+
+        <!-- 신규 변경 카드 플레이트 -->
+        <div class="main-shield-plate shield-right" id="panel-right" onclick="switchFocus('right')">
+            <div class="plate-title">스킬 변경</div>
+            <div id="box-right-slots" style="width:100%; display:flex; flex-direction:column; gap:20px;"></div>
+        </div>
+    </div>
+
+    <!-- 하단 체크 표시 바 -->
+    <div class="check-btn-row">
+        <button class="check-box-ui chk-yellow" id="ui-chk-left" onclick="switchFocus('left')">✔</button>
+        <button class="check-box-ui chk-dark" id="ui-chk-right" onclick="switchFocus('right')">✔</button>
+    </div>
+
+    <!-- 최하단 컨트롤 패널 구성 인터페이스 -->
+    <div class="bottom-control-wrap">
+        <div class="currency-status-row">
+            <div class="currency-box">
+                <div style="width:14px; height:14px; background:#4361ee; margin-right:6px; border-radius:2px;"></div>
+                <span>🎫 일반</span>
+                <span class="text-count-normal" id="txt-normal">x30</span>
+            </div>
+            <div class="currency-box">
+                <div style="width:14px; height:14px; background:#7209b7; margin-right:6px; border-radius:2px;"></div>
+                <span>🍇 고급</span>
+                <span class="text-count-premium" id="txt-premium">x4</span>
+            </div>
+        </div>
+
+        <div class="action-button-row">
+            <button class="btn-ui-base btn-roll-trigger" onclick="executeSkillChange('normal')">스킬 변경하기</button>
+            <button class="btn-ui-base btn-roll-trigger" onclick="executeSkillChange('premium')">스킬 변경하기</button>
+            <button class="btn-ui-base btn-submit-confirm" onclick="applyFinalDecision()">확인</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 유저 정의 스킬 데이터셋 풀 분기 보존
+    const baseSkillPool = {
+        '국대': ['국민 계투', '해결사', '전승 우승', '황금세대', '투쟁심', '약속의 8회', '국대 에이스'],
+        '메이저': [
+            '좌타해결사', '선봉장', '비FA계약', '히든 카드', '집념', '부동심', '좌승사자', '빅게임 헌터', 
+            '파이어볼', '대표 타자', '리그 탑플레이어', '오버페이스', '워크에식', '긴급투입', '얼리 스타트', 
+            '짜릿한 손맛', '구속 제어', '필승카드', '정밀타격', '백전노장', '결정적 한방', '대도', '집중력', 
+            '위닝샷', '난세의 영웅', '포수 리드', '컨택트 히터', '베스트 포지션', '전천후', '5툴 플레이어', 
+            '승리의 함성', '원투펀치', '마당쇠', '저니맨', '가을 사나이', '수비 안정성', '순위경쟁', '도전정신', 
+            '라이징 스타', '공포의 하위타선', '승부사', '리그의 강자', '원포인트 릴리프', '대타 스페셜', 
+            '첫단추', '리드오프', '철완', '홈 어드밴티지', '수호신', '패기', '아티스트', '흐름 끊기', 
+            '클러치피처', '타선지원', '언터쳐블', '에이스', '핵타선', '노림수', '클러치히터', '하이볼히터', 
+            '어퍼스윙', '배팅머신'
+        ],
+        '마이너': ['완급조절', '위기관리', '우타킬러', '좌타킬러', '매의눈', '타선연결', '타점기계', '우완킬러', '좌완킬러', '직구킬러'],
+        '루키': ['자신감', '더러운 볼끝', '기선제압', '이닝이터', '평정심', '스윗스팟', '테이블세터', '승부근성', '역전의 명수', '초구공락', '당겨치기', '밀어치기'],
+        '아마추어': ['사고방지', '진검승부', '변화구선호', '속구선호', '번트전문', '변화구킬러']
+    };
+
+    let activeMode = 'sig'; // sig, imp, gg, kd
+    let leftSet = [
+        { name: '집중력', tier: '메이저', level: 1 },
+        { name: '도전정신', tier: '메이저', level: 1 },
+        { name: '결정적 한방', tier: '메이저', level: 1 }
+    ];
+    let rightSet = [
+        { name: '리그의 강자', tier: '메이저', level: 1 },
+        { name: '대타 스페셜', tier: '메이저', level: 1 },
+        { name: '5툴 플레이어', tier: '메이저', level: 1 }
+    ];
+
+    let countNormal = 30;
+    let countPremium = 4;
+    let currentSelection = 'left';
+
+    window.onload = function() {
+        renderDisplay('left', leftSet);
+        renderDisplay('right', rightSet);
+        syncInterfaceState();
+    };
+
+    function changeCardType(mode) {
+        activeMode = mode;
+        const tabs = ['sig', 'imp', 'gg', 'kd'];
+        tabs.forEach(t => {
+            document.getElementById(`tab-${t}`).classList.toggle('active', t === mode);
+        });
+    }
+
+    function calculateTierRule(slotIdx) {
+        // 1번 슬롯 법칙 조항 대입
+        if (slotIdx === 0) {
+            if (activeMode === 'kd') {
+                return Math.random() < (10 / 17) ? '국대' : '메이저';
+            }
+            return '메이저';
+        }
+
+        // 2, 3번 슬롯 확률 공식 적용
+        const seed = Math.random() * 100;
+        if (activeMode === 'kd') {
+            if (seed < 25) return '아마추어';
+            if (seed < 53) return '루키';
+            if (seed < 83) return '마이너';
+            if (seed < 90) return '메이저';
+            return '국대';
+        } else {
+            if (seed < 25) return '아마추어';
+            if (seed < 53) return '루키';
+            if (seed < 83) return '마이너';
+            return '메이저';
+        }
+    }
+
+    function executeSkillChange(ticket) {
+        if (ticket === 'normal') {
+            if (countNormal <= 0) return alert("일반 변경권 재화가 부족합니다.");
+            countNormal--;
+        } else {
+            if (countPremium <= 0) return alert("고급 변경권 재화가 부족합니다.");
+            countPremium--;
+        }
+
+        let rolled = [];
+
+        while (true) {
+            rolled = [];
+            for (let i = 0; i < 3; i++) {
+                let tier = calculateTierRule(i);
+                // 중복 방지 필터링 가동 (1/N 균등 처리)
+                let pool = baseSkillPool[tier].filter(name => !rolled.some(r => r.name === name));
+                
+                if (pool.length === 0) {
+                    tier = '아마추어';
+                    pool = baseSkillPool[tier].filter(name => !rolled.some(r => r.name === name));
+                }
+
+                let targetName = pool[Math.floor(Math.random() * pool.length)];
+                rolled.push({ name: targetName, tier: tier, level: 1 });
+            }
+
+            // 완전 동일조합 롤백 연산 검증
+            let leftNames = leftSet.map(s => s.name).sort();
+            let rolledNames = rolled.map(s => s.name).sort();
+            let match = leftNames.every((v, idx) => v === rolledNames[idx]);
+
+            if (!match) break;
+        }
+
+        rightSet = rolled;
+        currentSelection = 'right';
+        renderDisplay('right', rightSet);
+        syncInterfaceState();
+    }
+
+    function renderDisplay(side, dataList) {
+        const root = document.getElementById(`box-${side}-slots`);
+        root.innerHTML = '';
+
+        dataList.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'skill-row';
+            row.innerHTML = `
+                <div class="skill-frame frame-${item.tier}">
+                    <div class="skill-display-text">${item.name.substring(0,4)}</div>
+                    <div class="in-level-box">${item.level}</div>
+                </div>
+                <div class="skill-name-text">${item.name}</div>
+            `;
+            root.appendChild(row);
+        });
+    }
+
+    function switchFocus(side) {
+        currentSelection = side;
+        syncInterfaceState();
+    }
+
+    function syncInterfaceState() {
+        document.getElementById('txt-normal').innerText = `x${countNormal}`;
+        document.getElementById('txt-premium').innerText = `x${countPremium}`;
+
+        const pL = document.getElementById('panel-left');
+        const pR = document.getElementById('panel-right');
+        const cL = document.getElementById('ui-chk-left');
+        const cR = document.getElementById('ui-chk-right');
+
+        if (currentSelection === 'left') {
+            pL.classList.add('active-glow-left');
+            pR.classList.remove('active-glow-right');
+            cL.className = 'check-box-ui chk-yellow';
+            cR.className = 'check-box-ui chk-dark';
+        } else {
+            pL.classList.remove('active-glow-left');
+            pR.classList.add('active-glow-right');
+            cL.className = 'check-box-ui chk-dark';
+            cR.className = 'check-box-ui chk-selected-right';
+        }
+    }
+
+    function applyFinalDecision() {
+        if (currentSelection === 'right') {
+            leftSet = [...rightSet];
+            renderDisplay('left', leftSet);
+            currentSelection = 'left';
+            syncInterfaceState();
+            alert("🎯 신규 스킬셋 확정 적용 완료!");
+        } else {
+            alert("기존 스킬셋을 유지했습니다.");
+        }
+    }
+</script>
+
+</body>
+</html>
